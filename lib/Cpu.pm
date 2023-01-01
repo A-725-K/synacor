@@ -109,6 +109,10 @@ sub _execNext {
     $self->_jf;
   } elsif ($next_op == $Operations::OPCODES->{ADD}) { # 9
     $self->_add;
+  } elsif ($next_op == $Operations::OPCODES->{MULT}) { # 10
+    $self->_mult;
+  } elsif ($next_op == $Operations::OPCODES->{MOD}) { # 11
+    $self->_mod;
   } elsif ($next_op == $Operations::OPCODES->{AND}) { # 12
     $self->_and;
   } elsif ($next_op == $Operations::OPCODES->{OR}) { # 13
@@ -295,6 +299,34 @@ sub _add {
   $op2 = $self->_fetch($op2);
   say "[$self->{_PC}] #9: add $dest $op1 $op2" if $self->{_verbose};
   my $result = ($op1 + $op2) % $MOD;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
+# [10:mult] -> store into <a> the product of <b> and <c> (modulo 32768)
+sub _mult {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #10: mult $dest $op1 $op2" if $self->{_verbose};
+  my $result = ($op1 * $op2) % $MOD;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
+# [11:mod] -> store into <a> the remainder of <b> divided by <c>
+sub _mod {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #11: mod $dest $op1 $op2" if $self->{_verbose};
+  my $result = $op1 % $op2;
   $self->_storeInReg($dest, $result);
   $self->{_PC} += 4;
   return;
