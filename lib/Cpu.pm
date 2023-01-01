@@ -97,6 +97,8 @@ sub _execNext {
     $self->jt;
   } elsif ($next_op == $Operations::OPCODES->{JF}) {
     $self->jf;
+  } elsif ($next_op == $Operations::OPCODES->{ADD}) {
+    $self->add;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) {
     $self->out;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) {
@@ -115,7 +117,7 @@ sub _getRegIndex {
   return $arg-$REG_BASE;
 }
 
-sub _checkIfRegister {
+sub _fetch {
   my ($self, $arg) = @_;
   if ($arg >= $REG_BASE) {
     $arg = @{ $self->{_registers} }[$self->_getRegIndex($arg)];
@@ -132,6 +134,12 @@ sub _getArgs {
     push @args, $next_arg;
   }
   return @args;
+}
+
+sub _storeInReg {
+  my ($self, $reg_idx, $value) = @_;
+  @{ $self->{_registers} }[$reg_idx] = $value;
+  return;
 }
 
 # #################################### #
@@ -158,7 +166,7 @@ sub set {
   my ($self) = @_;
   my ($reg, $value) = $self->_getArgs(2);
   $reg = $self->_getRegIndex($reg);
-  $value = $self->_checkIfRegister($value);
+  $value = $self->_fetch($value);
   say "[$self->{_PC}] #1: set $reg $value" if $self->{_verbose};
   @{ $self->{_registers} }[$reg] = $value;
   $self->{_PC} += 3;
@@ -169,7 +177,7 @@ sub set {
 sub jmp {
   my ($self) = @_;
   my ($addr) = $self->_getArgs(1);
-  $addr = $self->_checkIfRegister($addr);
+  $addr = $self->_fetch($addr);
   say "[$self->{_PC}] #6: jmp $addr" if $self->{_verbose};
   $self->{_PC} = $addr;
   return;
@@ -179,8 +187,8 @@ sub jmp {
 sub jt {
   my ($self) = @_;
   my ($arg, $addr) = $self->_getArgs(2);
-  $arg = $self->_checkIfRegister($arg);
-  $addr = $self->_checkIfRegister($addr);
+  $arg = $self->_fetch($arg);
+  $addr = $self->_fetch($addr);
   say "[$self->{_PC}] #7: jt $arg $addr" if $self->{_verbose};
   if ($arg > 0) {
     $self->{_PC} = $addr;
@@ -194,8 +202,8 @@ sub jt {
 sub jf {
   my ($self) = @_;
   my ($arg, $addr) = $self->_getArgs(2);
-  $arg = $self->_checkIfRegister($arg);
-  $addr = $self->_checkIfRegister($addr);
+  $arg = $self->_fetch($arg);
+  $addr = $self->_fetch($addr);
   say "[$self->{_PC}] #8: jf $arg $addr" if $self->{_verbose};
   if ($arg == 0) {
     $self->{_PC} = $addr;
@@ -205,11 +213,25 @@ sub jf {
   return;
 }
 
+# [9:add] -> assign into <a> the sum of <b> and <c> (modulo 32768)
+sub add {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #9: add $dest $op1 $op2" if $self->{_verbose};
+  my $result = ($op1 + $op2) % $MOD;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
 # [19:out] -> write the character represented by ascii code <a> to the terminal
 sub out {
   my ($self) = @_;
   my ($arg) = $self->_getArgs(1);
-  $arg = $self->_checkIfRegister($arg);
+  $arg = $self->_fetch($arg);
   say "[$self->{_PC}] #19: out $arg" if $self->{_verbose};
   print chr($arg);
   $self->{_PC} += 2;

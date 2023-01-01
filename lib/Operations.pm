@@ -25,6 +25,7 @@ our $OPCODES = {
   JMP => 6,
   JT => 7,
   JF => 8,
+  ADD => 9,
   OUT => 19,
   NOOP => 21,
 };
