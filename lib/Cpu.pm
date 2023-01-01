@@ -87,7 +87,6 @@ sub _execNext {
   my ($self) = @_;
 
   my $next_op = $self->{_memory}[$self->{_PC}];
-  # say "PC: $self->{_PC}\tNEXT OP: $next_op" if $self->{_verbose};
 
   if ($next_op == $Operations::OPCODES->{HALT}) { # 0
     $self->_halt;
@@ -129,13 +128,11 @@ sub _execNext {
     $self->_ret;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
     $self->_out;
+  } elsif ($next_op == $Operations::OPCODES->{IN}) { # 20
+    $self->_in;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
     $self->_noop;
   } else {
-    my @regs = @{ $self->{_registers} };
-    say "REGISTERS ===> @regs";
-    my @st = $self->{_stack}->GetStack;
-    say "STACK ===> @st";
     die "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
   }
 
@@ -433,6 +430,22 @@ sub _out {
   $arg = $self->_fetch($arg);
   say "[$self->{_PC}] #19: out $arg" if $self->{_verbose};
   print chr($arg);
+  $self->{_PC} += 2;
+  return;
+}
+
+# [20:in] -> read a character from the terminal and write its ascii code to
+#            <a>; it can be assumed that once input starts, it will continue
+#            until a newline is encountered; this means that you can safely
+#            read whole lines from the keyboard and trust that they will be
+#            fully read
+sub _in {
+  my ($self) = @_;
+  my ($reg) = $self->_getArgs(1);
+  $reg = $self->_getRegIndex($reg);
+  say "[$self->{_PC}] #20: in $reg" if $self->{_verbose};
+  my $c = ord(getc(STDIN));
+  $self->_storeInReg($reg, $c);
   $self->{_PC} += 2;
   return;
 }

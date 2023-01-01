@@ -42,6 +42,7 @@ our $OPCODES = {
   CALL => 17,
   RET => 18,
   OUT => 19,
+  IN => 20,
   NOOP => 21,
 };
 
