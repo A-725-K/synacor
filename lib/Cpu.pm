@@ -119,6 +119,10 @@ sub _execNext {
     $self->_or;
   } elsif ($next_op == $Operations::OPCODES->{NOT}) { # 14
     $self->_not;
+  } elsif ($next_op == $Operations::OPCODES->{RMEM}) { # 15
+    $self->_rmem;
+  } elsif ($next_op == $Operations::OPCODES->{WMEM}) { # 16
+    $self->_wmem;
   } elsif ($next_op == $Operations::OPCODES->{CALL}) { # 17
     $self->_call;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
@@ -369,6 +373,30 @@ sub _not {
   say "[$self->{_PC}] #14: not $dest $arg" if $self->{_verbose};
   my $result = ~$arg & 0x7fff;
   $self->_storeInReg($dest, $result);
+  $self->{_PC} += 3;
+  return;
+}
+
+# [15:rmem] -> read memory at address <b> and write it to <a>
+sub _rmem {
+  my ($self) = @_;
+  my ($dest, $addr) = $self->_getArgs(2);
+  $dest = $self->_getRegIndex($dest);
+  $addr = $self->_fetch($addr);
+  say "[$self->{_PC}] #15: rmem $dest $addr" if $self->{_verbose};
+  $self->_storeInReg($dest, $self->{_memory}[$addr]);
+  $self->{_PC} += 3;
+  return;
+}
+
+# [16:wmem] -> write the value from <b> into memory at address <a>
+sub _wmem {
+  my ($self) = @_;
+  my ($dest, $src) = $self->_getArgs(2);
+  $dest = $self->_fetch($dest);
+  $src = $self->_fetch($src);
+  say "[$self->{_PC}] #16: wmem $dest $src" if $self->{_verbose};
+  $self->{_memory}[$dest] = $src;
   $self->{_PC} += 3;
   return;
 }
