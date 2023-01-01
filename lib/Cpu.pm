@@ -55,20 +55,6 @@ sub new {
   return $self;
 }
 
-sub GetArgs {
-  my ($self, $n) = @_;
-  my @args;
-  for (1..$n) {
-    my $next_arg = $self->{_memory}[$self->{_PC}+$_];
-    die "Invalid value in memory" if $next_arg > $MAX_VALUE; 
-    if ($next_arg >= $REG_BASE) {
-      $next_arg = @{ $self->{_registers} }[$next_arg-$REG_BASE];
-    }
-    push @args, $next_arg;
-  }
-  return @args;
-}
-
 sub LoadFile {
   my ($self, $filename) = @_;
 
@@ -84,7 +70,18 @@ sub LoadFile {
   close $f;
 }
 
-sub ExecNext {
+sub Emulate {
+  my ($self) = @_;
+
+  while ($self->{_PC} < $self->{_addresses}) {
+    $self->_execNext;
+  }
+}
+
+# ################### #
+# private subroutines #
+# ################### #
+sub _execNext {
   my ($self) = @_;
 
   my $next_op = $self->{_memory}[$self->{_PC}];
@@ -92,6 +89,8 @@ sub ExecNext {
 
   if ($next_op == $Operations::OPCODES->{HALT}) {
     $self->halt; 
+  } elsif ($next_op == $Operations::OPCODES->{SET}) {
+    $self->set;
   } elsif ($next_op == $Operations::OPCODES->{JMP}) {
     $self->jmp;
   } elsif ($next_op == $Operations::OPCODES->{JT}) {
@@ -103,18 +102,36 @@ sub ExecNext {
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) {
     $self->noop;
   } else {
+    my @regs = @{ $self->{_registers} };
+    say "REGISTERS ===> @regs";
     die "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
   }
 
   return;
 }
 
-sub Emulate {
-  my ($self) = @_;
+sub _getRegIndex {
+  my ($self, $arg) = @_;
+  return $arg-$REG_BASE;
+}
 
-  while ($self->{_PC} < $self->{_addresses}) {
-    $self->ExecNext;
+sub _checkIfRegister {
+  my ($self, $arg) = @_;
+  if ($arg >= $REG_BASE) {
+    $arg = @{ $self->{_registers} }[$self->_getRegIndex($arg)];
   }
+  return $arg;
+}
+
+sub _getArgs {
+  my ($self, $n) = @_;
+  my @args;
+  for (1..$n) {
+    my $next_arg = $self->{_memory}[$self->{_PC}+$_];
+    die "Invalid value in memory" if $next_arg > $MAX_VALUE;
+    push @args, $next_arg;
+  }
+  return @args;
 }
 
 # #################################### #
@@ -136,10 +153,23 @@ sub halt {
   exit 0;
 }
 
+# [1:set] -> set register <a> to the value of <b>
+sub set {
+  my ($self) = @_;
+  my ($reg, $value) = $self->_getArgs(2);
+  $reg = $self->_getRegIndex($reg);
+  $value = $self->_checkIfRegister($value);
+  say "[$self->{_PC}] #1: set $reg $value" if $self->{_verbose};
+  @{ $self->{_registers} }[$reg] = $value;
+  $self->{_PC} += 3;
+  return;
+}
+
 # [6:jmp] -> jump to <a>
 sub jmp {
   my ($self) = @_;
-  my ($addr) = $self->GetArgs(1);
+  my ($addr) = $self->_getArgs(1);
+  $addr = $self->_checkIfRegister($addr);
   say "[$self->{_PC}] #6: jmp $addr" if $self->{_verbose};
   $self->{_PC} = $addr;
   return;
@@ -148,7 +178,9 @@ sub jmp {
 # [7:jt] -> if <a> is nonzero, jump to <b>
 sub jt {
   my ($self) = @_;
-  my ($arg, $addr) = $self->GetArgs(2);
+  my ($arg, $addr) = $self->_getArgs(2);
+  $arg = $self->_checkIfRegister($arg);
+  $addr = $self->_checkIfRegister($addr);
   say "[$self->{_PC}] #7: jt $arg $addr" if $self->{_verbose};
   if ($arg > 0) {
     $self->{_PC} = $addr;
@@ -161,7 +193,9 @@ sub jt {
 # [8:jf] -> if <a> is zero, jump to <b>
 sub jf {
   my ($self) = @_;
-  my ($arg, $addr) = $self->GetArgs(2);
+  my ($arg, $addr) = $self->_getArgs(2);
+  $arg = $self->_checkIfRegister($arg);
+  $addr = $self->_checkIfRegister($addr);
   say "[$self->{_PC}] #8: jf $arg $addr" if $self->{_verbose};
   if ($arg == 0) {
     $self->{_PC} = $addr;
@@ -174,7 +208,8 @@ sub jf {
 # [19:out] -> write the character represented by ascii code <a> to the terminal
 sub out {
   my ($self) = @_;
-  my ($arg) = $self->GetArgs(1);
+  my ($arg) = $self->_getArgs(1);
+  $arg = $self->_checkIfRegister($arg);
   say "[$self->{_PC}] #19: out $arg" if $self->{_verbose};
   print chr($arg);
   $self->{_PC} += 2;
