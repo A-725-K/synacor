@@ -40,6 +40,7 @@ our $OPCODES = {
   RMEM => 15,
   WMEM => 16,
   CALL => 17,
+  RET => 18,
   OUT => 19,
   NOOP => 21,
 };

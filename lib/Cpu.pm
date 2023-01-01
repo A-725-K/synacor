@@ -125,6 +125,8 @@ sub _execNext {
     $self->_wmem;
   } elsif ($next_op == $Operations::OPCODES->{CALL}) { # 17
     $self->_call;
+  } elsif ($next_op == $Operations::OPCODES->{RET}) { # 18
+    $self->_ret;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
     $self->_out;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
@@ -409,6 +411,17 @@ sub _call {
   $addr = $self->_fetch($addr);
   say "[$self->{_PC}] #17: call $addr" if $self->{_verbose};
   $self->{_stack}->Push($self->{_PC}+2);
+  $self->{_PC} = $addr;
+  return;
+}
+
+# [18:ret] -> remove the top element from the stack and jump to it;
+#             empty stack = halt
+sub _ret {
+  my ($self) = @_;
+  say "[$self->{_PC}] #18: ret" if $self->{_verbose};
+  $self->halt if $self->{_stack}->IsEmpty;
+  my ($addr) = $self->{_stack}->Pop;
   $self->{_PC} = $addr;
   return;
 }
