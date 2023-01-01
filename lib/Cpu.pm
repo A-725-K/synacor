@@ -60,6 +60,15 @@ sub new {
   return $self;
 }
 
+sub GetArgs {
+  my ($self, $n) = @_;
+  my @args;
+  for (1..$n) {
+    push @args, $self->{_memory}[$self->{_PC}+$_];
+  }
+  return @args;
+}
+
 sub LoadFile {
   my ($self, $filename) = @_;
 
@@ -79,10 +88,14 @@ sub ExecNext {
   my ($self) = @_;
 
   my $next_op = $self->{_memory}[$self->{_PC}];
+  say "PC: $self->{_PC}\tNEXT OP: $next_op" if $self->{_verbose};
 
   if ($next_op == $Operations::OPCODES->{HALT}) {
     say "Executing #0: HALT" if $self->{_verbose};
     $self->halt; 
+  } elsif ($next_op == $Operations::OPCODES->{JMP}) {
+    say "Executing #6 JMP" if $self->{_verbose};
+    $self->jmp;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) {
     say "Executing #19: OUT" if $self->{_verbose};
     $self->out;
@@ -120,13 +133,18 @@ sub halt {
   exit 0;
 }
 
+sub jmp {
+  my ($self) = @_;
+  my ($arg) = $self->GetArgs(1);
+  $self->{_PC} = $arg; 
+  return;
+}
+
 # [19:out] -> write the character represented by ascii code <a> to the terminal
 sub out {
   my ($self) = @_;
-
-  my $a = chr($self->{_memory}[$self->{_PC}+1]);
-  print $a;
-
+  my ($arg) = $self->GetArgs(1);
+  print chr($arg);
   $self->{_PC} += 2;
   return;
 }
