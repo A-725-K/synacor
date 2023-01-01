@@ -109,6 +109,12 @@ sub _execNext {
     $self->_jf;
   } elsif ($next_op == $Operations::OPCODES->{ADD}) { # 9
     $self->_add;
+  } elsif ($next_op == $Operations::OPCODES->{AND}) { # 12
+    $self->_and;
+  } elsif ($next_op == $Operations::OPCODES->{OR}) { # 13
+    $self->_or;
+  } elsif ($next_op == $Operations::OPCODES->{NOT}) { # 14
+    $self->_not;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
     $self->_out;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
@@ -289,6 +295,47 @@ sub _add {
   my $result = ($op1 + $op2) % $MOD;
   $self->_storeInReg($dest, $result);
   $self->{_PC} += 4;
+  return;
+}
+
+# [12:and] -> stores into <a> the bitwise and of <b> and <c>
+sub _and {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #12: and $dest $op1 $op2" if $self->{_verbose};
+  my $result = $op1 & $op2;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
+# [13:or] -> stores into <a> the bitwise or of <b> and <c>
+sub _or {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #13: or $dest $op1 $op2" if $self->{_verbose};
+  my $result = $op1 | $op2;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
+# [14:not] -> stores 15-bit bitwise inverse of <b> in <a>
+sub _not {
+  my ($self) = @_;
+  my ($dest, $arg) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $arg = $self->_fetch($arg);
+  say "[$self->{_PC}] #14: not $dest $arg" if $self->{_verbose};
+  my $result = ~$arg & 0x7fff;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 3;
   return;
 }
 

@@ -32,6 +32,9 @@ our $OPCODES = {
   JT => 7,
   JF => 8,
   ADD => 9,
+  AND => 12,
+  OR => 13,
+  NOT => 14,
   OUT => 19,
   NOOP => 21,
 };
