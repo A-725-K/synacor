@@ -51,5 +51,10 @@ sub IsEmpty {
   return $self->Size == 0;
 }
 
+sub GetStack {
+  my ($self) = @_;
+  return @{ $self->{_stack} };
+}
+
 1;
 

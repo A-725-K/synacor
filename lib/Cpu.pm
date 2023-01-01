@@ -89,29 +89,35 @@ sub _execNext {
   my $next_op = $self->{_memory}[$self->{_PC}];
   # say "PC: $self->{_PC}\tNEXT OP: $next_op" if $self->{_verbose};
 
-  if ($next_op == $Operations::OPCODES->{HALT}) {
+  if ($next_op == $Operations::OPCODES->{HALT}) { # 0
     $self->_halt;
-  } elsif ($next_op == $Operations::OPCODES->{EQ}) {
-    $self->_eq;
-  } elsif ($next_op == $Operations::OPCODES->{GT}) {
-    $self->_gt;
-  } elsif ($next_op == $Operations::OPCODES->{SET}) {
+  } elsif ($next_op == $Operations::OPCODES->{SET}) { # 1
     $self->_set;
-  } elsif ($next_op == $Operations::OPCODES->{JMP}) {
+  } elsif ($next_op == $Operations::OPCODES->{PUSH}) { # 2
+    $self->_push;
+  } elsif ($next_op == $Operations::OPCODES->{POP}) { # 3
+    $self->_pop;
+  } elsif ($next_op == $Operations::OPCODES->{EQ}) { # 4
+    $self->_eq;
+  } elsif ($next_op == $Operations::OPCODES->{GT}) { # 5
+    $self->_gt;
+  } elsif ($next_op == $Operations::OPCODES->{JMP}) { # 6
     $self->_jmp;
-  } elsif ($next_op == $Operations::OPCODES->{JT}) {
+  } elsif ($next_op == $Operations::OPCODES->{JT}) { # 7
     $self->_jt;
-  } elsif ($next_op == $Operations::OPCODES->{JF}) {
+  } elsif ($next_op == $Operations::OPCODES->{JF}) { # 8
     $self->_jf;
-  } elsif ($next_op == $Operations::OPCODES->{ADD}) {
+  } elsif ($next_op == $Operations::OPCODES->{ADD}) { # 9
     $self->_add;
-  } elsif ($next_op == $Operations::OPCODES->{OUT}) {
+  } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
     $self->_out;
-  } elsif ($next_op == $Operations::OPCODES->{NOOP}) {
+  } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
     $self->_noop;
   } else {
     my @regs = @{ $self->{_registers} };
     say "REGISTERS ===> @regs";
+    my @st = $self->{_stack}->GetStack;
+    say "STACK ===> @st";
     die "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
   }
 
@@ -174,8 +180,33 @@ sub _set {
   $reg = $self->_getRegIndex($reg);
   $value = $self->_fetch($value);
   say "[$self->{_PC}] #1: set $reg $value" if $self->{_verbose};
-  @{ $self->{_registers} }[$reg] = $value;
+  $self->_storeInReg($reg, $value);
   $self->{_PC} += 3;
+  return;
+}
+
+# [2:push] -> push <a> onto the stack
+sub _push {
+  my ($self) = @_;
+  my ($arg) = $self->_getArgs(1);
+  $arg = $self->_fetch($arg);
+  say "[$self->{_PC}] #2: push $arg" if $self->{_verbose};
+  $self->{_stack}->Push($arg);
+  $self->{_PC} += 2;
+  return;
+}
+
+# [3:pop] -> pop: 3 a remove the top element from the stack and write it into
+#            <a>; empty stack = error
+sub _pop {
+  my ($self) = @_;
+  my ($reg) = $self->_getArgs(1);
+  $reg = $self->_getRegIndex($reg);
+  say "[$self->{_PC}] #3: pop $reg" if $self->{_verbose};
+  die "Error: Cannot pop from empty stack" if $self->{_stack}->IsEmpty;
+  my $value = $self->{_stack}->Pop;
+  $self->_storeInReg($reg, $value);
+  $self->{_PC} += 2;
   return;
 }
 

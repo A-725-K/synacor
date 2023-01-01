@@ -24,6 +24,8 @@ use warnings;
 our $OPCODES = {
   HALT => 0,
   SET => 1,
+  PUSH => 2,
+  POP => 3,
   EQ => 4,
   GT => 5,
   JMP => 6,
