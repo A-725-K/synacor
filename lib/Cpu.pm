@@ -64,7 +64,8 @@ sub GetArgs {
   my ($self, $n) = @_;
   my @args;
   for (1..$n) {
-    push @args, $self->{_memory}[$self->{_PC}+$_];
+    my $next_arg = $self->{_memory}[$self->{_PC}+$_];
+    push @args, $next_arg;
   }
   return @args;
 }
@@ -88,22 +89,22 @@ sub ExecNext {
   my ($self) = @_;
 
   my $next_op = $self->{_memory}[$self->{_PC}];
-  say "PC: $self->{_PC}\tNEXT OP: $next_op" if $self->{_verbose};
+  # say "PC: $self->{_PC}\tNEXT OP: $next_op" if $self->{_verbose};
 
   if ($next_op == $Operations::OPCODES->{HALT}) {
-    say "Executing #0: HALT" if $self->{_verbose};
     $self->halt; 
   } elsif ($next_op == $Operations::OPCODES->{JMP}) {
-    say "Executing #6 JMP" if $self->{_verbose};
     $self->jmp;
+  } elsif ($next_op == $Operations::OPCODES->{JT}) {
+    $self->jt;
+  } elsif ($next_op == $Operations::OPCODES->{JF}) {
+    $self->jf;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) {
-    say "Executing #19: OUT" if $self->{_verbose};
     $self->out;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) {
-    say "Executing #21: NOOP" if $self->{_verbose};
     $self->noop;
   } else {
-    say "Operation not known: #OPCODE = $next_op";
+    say "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
     exit 1;
   }
 
@@ -125,18 +126,50 @@ sub Emulate {
 # [0:halt] -> stop execution and terminate the program
 sub halt { 
   my ($self) = @_;
-  say "Shutting down:";
-  for (3..0) {
-    say "$_...";
+  say "[$self->{_PC}] #0: halt" if $self->{_verbose};
+  say "\n"."#"x30;
+  say "Shutting down the emulator!";
+  for (my $t = 3; $t > 0; $t--) {
+    say "\t  $t...";
     sleep 1;
   }
+  say "Bye!";
+  say "#"x30;
   exit 0;
 }
 
+# [6:jmp] -> jump to <a>
 sub jmp {
   my ($self) = @_;
-  my ($arg) = $self->GetArgs(1);
-  $self->{_PC} = $arg; 
+  my ($addr) = $self->GetArgs(1);
+  say "[$self->{_PC}] #6: jmp $addr" if $self->{_verbose};
+  $self->{_PC} = $addr;
+  return;
+}
+
+# [7:jt] -> if <a> is nonzero, jump to <b>
+sub jt {
+  my ($self) = @_;
+  my ($arg, $addr) = $self->GetArgs(2);
+  say "[$self->{_PC}] #7: jt $arg $addr" if $self->{_verbose};
+  if ($arg > 0) {
+    $self->{_PC} = $addr;
+  } else {
+    $self->{_PC} += 3;
+  }
+  return;
+}
+
+# [8:jf] -> if <a> is zero, jump to <b>
+sub jf {
+  my ($self) = @_;
+  my ($arg, $addr) = $self->GetArgs(2);
+  say "[$self->{_PC}] #8: jf $arg $addr" if $self->{_verbose};
+  if ($arg == 0) {
+    $self->{_PC} = $addr;
+  } else {
+    $self->{_PC} += 3;
+  }
   return;
 }
 
@@ -144,6 +177,7 @@ sub jmp {
 sub out {
   my ($self) = @_;
   my ($arg) = $self->GetArgs(1);
+  say "[$self->{_PC}] #19: out $arg" if $self->{_verbose};
   print chr($arg);
   $self->{_PC} += 2;
   return;
@@ -152,6 +186,7 @@ sub out {
 # [21:noop] -> no operation
 sub noop {
   my ($self) = @_;
+  say "[$self->{_PC}] #21: noop" if $self->{_verbose};
   $self->{_PC}++;
   return;
 }
