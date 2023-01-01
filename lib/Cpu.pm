@@ -88,21 +88,25 @@ sub _execNext {
   # say "PC: $self->{_PC}\tNEXT OP: $next_op" if $self->{_verbose};
 
   if ($next_op == $Operations::OPCODES->{HALT}) {
-    $self->halt; 
+    $self->_halt;
+  } elsif ($next_op == $Operations::OPCODES->{EQ}) {
+    $self->_eq;
+  } elsif ($next_op == $Operations::OPCODES->{GT}) {
+    $self->_gt;
   } elsif ($next_op == $Operations::OPCODES->{SET}) {
-    $self->set;
+    $self->_set;
   } elsif ($next_op == $Operations::OPCODES->{JMP}) {
-    $self->jmp;
+    $self->_jmp;
   } elsif ($next_op == $Operations::OPCODES->{JT}) {
-    $self->jt;
+    $self->_jt;
   } elsif ($next_op == $Operations::OPCODES->{JF}) {
-    $self->jf;
+    $self->_jf;
   } elsif ($next_op == $Operations::OPCODES->{ADD}) {
-    $self->add;
+    $self->_add;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) {
-    $self->out;
+    $self->_out;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) {
-    $self->noop;
+    $self->_noop;
   } else {
     my @regs = @{ $self->{_registers} };
     say "REGISTERS ===> @regs";
@@ -147,7 +151,7 @@ sub _storeInReg {
 # #################################### #
 
 # [0:halt] -> stop execution and terminate the program
-sub halt { 
+sub _halt {
   my ($self) = @_;
   say "[$self->{_PC}] #0: halt" if $self->{_verbose};
   say "\n"."#"x30;
@@ -162,7 +166,7 @@ sub halt {
 }
 
 # [1:set] -> set register <a> to the value of <b>
-sub set {
+sub _set {
   my ($self) = @_;
   my ($reg, $value) = $self->_getArgs(2);
   $reg = $self->_getRegIndex($reg);
@@ -173,8 +177,36 @@ sub set {
   return;
 }
 
+# [4:eq] -> set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
+sub _eq {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #4: eq $dest $op1 $op2" if $self->{_verbose};
+  my $result = $op1 == $op2 ? 1 : 0;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
+# [5:gt] -> set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
+sub _gt {
+  my ($self) = @_;
+  my ($dest, $op1, $op2) = $self->_getArgs(3);
+  $dest = $self->_getRegIndex($dest);
+  $op1 = $self->_fetch($op1);
+  $op2 = $self->_fetch($op2);
+  say "[$self->{_PC}] #5: gt $dest $op1 $op2" if $self->{_verbose};
+  my $result = $op1 > $op2 ? 1 : 0;
+  $self->_storeInReg($dest, $result);
+  $self->{_PC} += 4;
+  return;
+}
+
 # [6:jmp] -> jump to <a>
-sub jmp {
+sub _jmp {
   my ($self) = @_;
   my ($addr) = $self->_getArgs(1);
   $addr = $self->_fetch($addr);
@@ -184,7 +216,7 @@ sub jmp {
 }
 
 # [7:jt] -> if <a> is nonzero, jump to <b>
-sub jt {
+sub _jt {
   my ($self) = @_;
   my ($arg, $addr) = $self->_getArgs(2);
   $arg = $self->_fetch($arg);
@@ -199,7 +231,7 @@ sub jt {
 }
 
 # [8:jf] -> if <a> is zero, jump to <b>
-sub jf {
+sub _jf {
   my ($self) = @_;
   my ($arg, $addr) = $self->_getArgs(2);
   $arg = $self->_fetch($arg);
@@ -214,7 +246,7 @@ sub jf {
 }
 
 # [9:add] -> assign into <a> the sum of <b> and <c> (modulo 32768)
-sub add {
+sub _add {
   my ($self) = @_;
   my ($dest, $op1, $op2) = $self->_getArgs(3);
   $dest = $self->_getRegIndex($dest);
@@ -228,7 +260,7 @@ sub add {
 }
 
 # [19:out] -> write the character represented by ascii code <a> to the terminal
-sub out {
+sub _out {
   my ($self) = @_;
   my ($arg) = $self->_getArgs(1);
   $arg = $self->_fetch($arg);
@@ -239,7 +271,7 @@ sub out {
 }
 
 # [21:noop] -> no operation
-sub noop {
+sub _noop {
   my ($self) = @_;
   say "[$self->{_PC}] #21: noop" if $self->{_verbose};
   $self->{_PC}++;
