@@ -35,6 +35,7 @@ our $OPCODES = {
   AND => 12,
   OR => 13,
   NOT => 14,
+  CALL => 17,
   OUT => 19,
   NOOP => 21,
 };

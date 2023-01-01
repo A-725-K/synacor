@@ -115,6 +115,8 @@ sub _execNext {
     $self->_or;
   } elsif ($next_op == $Operations::OPCODES->{NOT}) { # 14
     $self->_not;
+  } elsif ($next_op == $Operations::OPCODES->{CALL}) { # 17
+    $self->_call;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
     $self->_out;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
@@ -336,6 +338,18 @@ sub _not {
   my $result = ~$arg & 0x7fff;
   $self->_storeInReg($dest, $result);
   $self->{_PC} += 3;
+  return;
+}
+
+# [17:call] -> write the address of the next instruction to the stack and
+#              jump to <a>
+sub _call {
+  my ($self) = @_;
+  my ($addr) = $self->_getArgs(1);
+  $addr = $self->_fetch($addr);
+  say "[$self->{_PC}] #17: call $addr" if $self->{_verbose};
+  $self->{_stack}->Push($self->{_PC}+2);
+  $self->{_PC} = $addr;
   return;
 }
 
