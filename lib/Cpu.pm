@@ -26,6 +26,8 @@ use Stack;
 use Operations;
 
 our $MOD = 32768;
+our $REG_BASE = 32768;
+our $MAX_VALUE = 32775;
 
 sub new {
   my ($class, $_verbose) = @_;
@@ -34,14 +36,7 @@ sub new {
 
   my $self = {
     # registers
-    _reg0 => 0,
-    _reg1 => 0,
-    _reg2 => 0,
-    _reg3 => 0,
-    _reg4 => 0,
-    _reg5 => 0,
-    _reg6 => 0,
-    _reg7 => 0,
+    _registers => [0, 0, 0, 0, 0, 0, 0, 0],
 
     # unbounded stack
     _stack => Stack->new,
@@ -65,6 +60,10 @@ sub GetArgs {
   my @args;
   for (1..$n) {
     my $next_arg = $self->{_memory}[$self->{_PC}+$_];
+    die "Invalid value in memory" if $next_arg > $MAX_VALUE; 
+    if ($next_arg >= $REG_BASE) {
+      $next_arg = @{ $self->{_registers} }[$next_arg-$REG_BASE];
+    }
     push @args, $next_arg;
   }
   return @args;
@@ -104,8 +103,7 @@ sub ExecNext {
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) {
     $self->noop;
   } else {
-    say "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
-    exit 1;
+    die "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
   }
 
   return;
