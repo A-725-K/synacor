@@ -25,6 +25,7 @@ use File::Basename;
 use lib dirname (__FILE__);
 
 use Stack;
+use Debugger;
 use Operations;
 
 our $MOD = 32768;
@@ -36,7 +37,9 @@ sub new {
 
   $_verbose //= 0;
 
-  my $self = {
+  my $self;
+
+  $self = {
     # registers
     _registers => [0, 0, 0, 0, 0, 0, 0, 0],
 
@@ -52,7 +55,9 @@ sub new {
     # utilities
     _verbose => $_verbose,
     _addresses => 0,
+    _debugger => Debugger->new(\$self),
   };
+
   bless $self, $class;
   return $self;
 }
@@ -444,8 +449,13 @@ sub _in {
   my ($reg) = $self->_getArgs(1);
   $reg = $self->_getRegIndex($reg);
   say "[$self->{_PC}] #20: in $reg" if $self->{_verbose};
-  my $c = ord(getc(STDIN));
-  $self->_storeInReg($reg, $c);
+  my $c = getc(STDIN);
+  if ($c eq '@') {
+    chomp(my $dbg_cmd = <>);
+    $self->{_debugger}->RunCmd($dbg_cmd);
+    return;
+  }
+  $self->_storeInReg($reg, ord($c));
   $self->{_PC} += 2;
   return;
 }
