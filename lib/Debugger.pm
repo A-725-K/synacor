@@ -48,11 +48,20 @@ sub RunCmd {
     $self->DumpStack;
   } elsif ($cmd[0] eq 'reg') {
     $self->DumpRegisters;
+  } elsif ($cmd[0] eq 'setreg') {
+    $self->SetReg($cmd[1], $cmd[2]);
   } else {
     say "Command not known, insert again."
   }
 
   return;
+}
+
+sub SetReg {
+  my ($self, $regIdx, $value) = @_;
+  die "Wrong register index: $regIdx, it should be in [0,7]"
+    if $regIdx < 0 || $regIdx > 7;
+  ${ $self->{_CPU} }->{_registers}[$regIdx] = $value;
 }
 
 sub DumpStack {
