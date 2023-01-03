@@ -44,6 +44,10 @@ sub RunCmd {
     $self->PrintAddrs($cmd[1], 1);
   } elsif ($cmd[0] eq 'p') {
     $self->PrintAddrs(${ $self->{_CPU} }->{_PC}, $cmd[1]);
+  } elsif ($cmd[0] eq 'st') {
+    $self->DumpStack;
+  } elsif ($cmd[0] eq 'reg') {
+    $self->DumpRegisters;
   } else {
     say "Command not known, insert again."
   }
@@ -51,13 +55,31 @@ sub RunCmd {
   return;
 }
 
+sub DumpStack {
+  my ($self) = @_;
+  my $i = 0;
+  say 'Stack:';
+  foreach (${ $self->{_CPU} }->{_stack}->GetStack) {
+    say "\tSTACK[$i]: $_";
+    $i++;
+  }
+}
+
+sub DumpRegisters {
+  my ($self) = @_;
+  my $i = 0;
+  say 'Registers:';
+  foreach (@{ ${ $self->{_CPU} }->{_registers} }) {
+    say "\tREG[$i]: $_";
+    $i++;
+  }
+}
+
 sub PrintAddrs {
   my ($self, $addr, $len) = @_;
-  for (0..$len) {
+  for (0..$len-1) {
     my $value = ${ $self->{_CPU} }->{_memory}[$addr+$_];
-    # if ($value >= 32768) {
-    #   $value = ${ $self->{_CPU} }->{_registers}[$value-32768];
-    # }
+    $value = ${ $self->{_CPU} }->_fetch($value);
     say "MEM[$addr+$_] = $value";
   }
 }
