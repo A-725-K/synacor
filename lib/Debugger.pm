@@ -40,6 +40,8 @@ sub RunCmd {
 
   if ($cmd[0] eq 'solvecoins') {
     $self->SolveCoins;
+  } elsif ($cmd[0] eq 'v') {
+    $self->ToggleVerbose;
   } elsif ($cmd[0] eq 'x') {
     $self->PrintAddrs($cmd[1], 1);
   } elsif ($cmd[0] eq 'p') {
@@ -57,11 +59,18 @@ sub RunCmd {
   return;
 }
 
+sub ToggleVerbose {
+  my ($self) = @_;
+  ${ $self->{_CPU} }->{_verbose} = (${ $self->{_CPU} }->{_verbose}+1) % 2;
+  return;
+}
+
 sub SetReg {
   my ($self, $regIdx, $value) = @_;
   die "Wrong register index: $regIdx, it should be in [0,7]"
     if $regIdx < 0 || $regIdx > 7;
   ${ $self->{_CPU} }->{_registers}[$regIdx] = $value;
+  return;
 }
 
 sub DumpStack {
