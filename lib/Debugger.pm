@@ -78,7 +78,9 @@ sub HandleBreakpoint {
   return;
 }
 
-# FIXME: UNSETTING BREAKPOINT WORKS ONLY WHEN PROMPT IS SHOWN
+# ############################################ #
+# private subroutines and debugger opearations #
+# ############################################ #
 sub _setUnsetBreakpoint {
   my ($self, $addr) = @_;
 
