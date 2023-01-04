@@ -196,8 +196,10 @@ sub _toggleVerbose {
 
 sub _setReg {
   my ($self, $regIdx, $value) = @_;
-  die "Wrong register index: $regIdx, it should be in [0,7]"
-    if $regIdx < 0 || $regIdx > 7;
+  if ($regIdx < 0 || $regIdx > 7) {
+    say "Wrong register index: $regIdx, it should be in [0,7]";
+    return;
+  }
   ${ $self->{_CPU} }->{_registers}[$regIdx] = $value;
   return;
 }
