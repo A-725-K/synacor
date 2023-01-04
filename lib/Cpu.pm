@@ -137,6 +137,8 @@ sub _execNext {
     $self->_in;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
     $self->_noop;
+  } elsif ($next_op == $Operations::OPCODES->{BP}) { # -1
+    $self->{_debugger}->HandleBreakpoint;
   } else {
     die "Operation not known: #OPCODE = $next_op. Segmentation fault at $self->{_PC}";
   }

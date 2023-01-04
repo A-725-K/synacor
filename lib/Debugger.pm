@@ -27,6 +27,7 @@ sub new {
   my ($class, $cpu) = @_;
 
   my $self = {
+    _breakpoints => {},
     _CPU => $cpu,
   };
 
@@ -39,23 +40,25 @@ sub RunCmd {
   my @cmd = split ' ', $line;
 
   if ($cmd[0] eq 'solvecoins') {
-    $self->SolveCoins;
+    $self->_solveCoins;
+  } elsif ($cmd[0] eq 'b') {
+    $self->_setUnsetBreakpoint($cmd[1]);
   } elsif ($cmd[0] eq 'v') {
-    $self->ToggleVerbose;
+    $self->_toggleVerbose;
   } elsif ($cmd[0] eq 'x') {
-    $self->PrintAddrs($cmd[1], 1);
+    $self->_printAddrs($cmd[1], 1);
   } elsif ($cmd[0] eq 'p') {
-    $self->PrintAddrs(${ $self->{_CPU} }->{_PC}, $cmd[1]);
+    $self->_printAddrs(${ $self->{_CPU} }->{_PC}, $cmd[1]);
   } elsif ($cmd[0] eq 'save') {
-    $self->SaveState($cmd[1]);
+    $self->_saveState($cmd[1]);
   } elsif ($cmd[0] eq 'load') {
-    $self->LoadState($cmd[1]);
+    $self->_loadState($cmd[1]);
   } elsif ($cmd[0] eq 'st') {
-    $self->DumpStack;
+    $self->_dumpStack;
   } elsif ($cmd[0] eq 'reg') {
-    $self->DumpRegisters;
+    $self->_dumpRegisters;
   } elsif ($cmd[0] eq 'setreg') {
-    $self->SetReg($cmd[1], $cmd[2]);
+    $self->_setReg($cmd[1], $cmd[2]);
   } else {
     say "Command not known, insert again."
   }
@@ -63,7 +66,61 @@ sub RunCmd {
   return;
 }
 
-sub SaveState {
+sub HandleBreakpoint {
+  my ($self) = @_;
+  my $cpu = ${ $self->{_CPU} };
+
+  print '*DBG* ?- ';
+  chomp(my $dbg_cmd = <>);
+  if ($dbg_cmd ne 'c') {
+    $self->RunCmd($dbg_cmd);
+  }
+  return;
+}
+
+# FIXME: UNSETTING BREAKPOINT WORKS ONLY WHEN PROMPT IS SHOWN
+sub _setUnsetBreakpoint {
+  my ($self, $addr) = @_;
+
+  # If no address specified, display existing breakpoints
+  if (!defined $addr) {
+    $self->_displayBreakpoints;
+    return;
+  }
+
+  my $cpu = ${ $self->{_CPU} };
+  if ($addr < 0 || $addr >= $cpu->{_addresses}) {
+    say 'You must provide a valid address to set a breakpoint!';
+    return;
+  }
+
+  # If exists already a breakpoint, then remove it
+  # Otherwise create a new one
+  if (exists $self->{_breakpoints}{$addr}) {
+    my $old_instr = $self->{_breakpoints}{$addr};
+    $cpu->{_memory}[$addr] = $old_instr;
+    delete $self->{_breakpoints}{$cpu->{_PC}};
+  } else {
+    my $old_instr = $cpu->{_memory}[$addr];
+    $self->{_breakpoints}->{$addr} = $old_instr;
+    $cpu->{_memory}[$addr] = -1;
+  }
+
+  return;
+}
+
+sub _displayBreakpoints {
+  my ($self) = @_;
+  my $i = 0;
+  say "Breakpoints in the CPU:";
+  foreach (keys %{ $self->{_breakpoints} }) {
+    say "  - Break[$i]: $_";
+    $i++;
+  }
+  return;
+}
+
+sub _saveState {
   my ($self, $filename) = @_;
   $filename //= 'dump.bin';
   my $cpu = ${ $self->{_CPU} };
@@ -80,7 +137,8 @@ sub SaveState {
   close $f;
 }
 
-sub LoadState {   my ($self, $filename) = @_;
+sub _loadState {
+  my ($self, $filename) = @_;
   if (!$filename) {
     say 'You must provide a file to load the state from!';
     return;
@@ -125,13 +183,13 @@ sub LoadState {   my ($self, $filename) = @_;
   close $f;
 }
 
-sub ToggleVerbose {
+sub _toggleVerbose {
   my ($self) = @_;
   ${ $self->{_CPU} }->{_verbose} = (${ $self->{_CPU} }->{_verbose}+1) % 2;
   return;
 }
 
-sub SetReg {
+sub _setReg {
   my ($self, $regIdx, $value) = @_;
   die "Wrong register index: $regIdx, it should be in [0,7]"
     if $regIdx < 0 || $regIdx > 7;
@@ -139,7 +197,7 @@ sub SetReg {
   return;
 }
 
-sub DumpStack {
+sub _dumpStack {
   my ($self) = @_;
   my $i = 0;
   say 'Stack:';
@@ -149,7 +207,7 @@ sub DumpStack {
   }
 }
 
-sub DumpRegisters {
+sub _dumpRegisters {
   my ($self) = @_;
   my $i = 0;
   say 'Registers:';
@@ -159,16 +217,19 @@ sub DumpRegisters {
   }
 }
 
-sub PrintAddrs {
+sub _printAddrs {
   my ($self, $addr, $len) = @_;
   for (0..$len-1) {
     my $value = ${ $self->{_CPU} }->{_memory}[$addr+$_];
     $value = ${ $self->{_CPU} }->_fetch($value);
+    if ($value < 0) {
+      $value = "$self->{_breakpoints}{$addr+$_} [BP]";
+    }
     say "MEM[$addr+$_] = $value";
   }
 }
 
-sub SolveCoins {
+sub _solveCoins {
   my ($self) = @_;
 
   my %colors = (

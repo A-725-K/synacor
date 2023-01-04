@@ -22,6 +22,10 @@ use strict;
 use warnings;
 
 our $OPCODES = {
+  # DBG util
+  BP => -1, # breakpoint
+
+  # CPU opcode
   HALT => 0,
   SET => 1,
   PUSH => 2,
