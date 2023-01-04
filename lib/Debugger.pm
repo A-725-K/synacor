@@ -46,6 +46,10 @@ sub RunCmd {
     $self->PrintAddrs($cmd[1], 1);
   } elsif ($cmd[0] eq 'p') {
     $self->PrintAddrs(${ $self->{_CPU} }->{_PC}, $cmd[1]);
+  } elsif ($cmd[0] eq 'save') {
+    $self->SaveState($cmd[1]);
+  } elsif ($cmd[0] eq 'load') {
+    $self->LoadState($cmd[1]);
   } elsif ($cmd[0] eq 'st') {
     $self->DumpStack;
   } elsif ($cmd[0] eq 'reg') {
@@ -57,6 +61,68 @@ sub RunCmd {
   }
 
   return;
+}
+
+sub SaveState {
+  my ($self, $filename) = @_;
+  $filename //= 'dump.bin';
+  my $cpu = ${ $self->{_CPU} };
+
+  open my $f, '>', $filename or die "Cannot open $filename";
+  binmode $f;
+
+  print $f pack 'v', $cpu->{_PC};
+  foreach (@{ $cpu->{_registers} }) { print $f pack 'v', $_; }
+  print $f pack 'v', $cpu->{_addresses};
+  foreach (@{ $cpu->{_memory} }) { print $f pack 'v', $_; }
+  foreach ($cpu->{_stack}->GetStack) { print $f pack 'v', $_; }
+
+  close $f;
+}
+
+sub LoadState {   my ($self, $filename) = @_;
+  if (!$filename) {
+    say 'You must provide a file to load the state from!';
+    return;
+  }
+
+  ## no critic (RequireBriefOpen)
+  open my $f, '<', $filename or die "Cannot open $filename";
+  binmode $f;
+  ## use critic
+
+  # Restore PC
+  read $f, my $next_value, 2;
+  $next_value = unpack 'S', $next_value;
+  ${ $self->{_CPU} }->{_PC} = $next_value;
+
+  # Load registers
+  for (my $i = 0; $i < 8; $i++) {
+    read $f, $next_value, 2;
+    $next_value = unpack 'S', $next_value;
+    ${ $self->{_CPU} }->{_registers}[$i] = $next_value;
+  }
+
+  # Load memory
+  read $f, $next_value, 2;
+  $next_value = unpack 'S', $next_value;
+  ${ $self->{_CPU} }->{_addresses} = $next_value;
+
+  my @memory;
+  for (my $i = 0; $i < ${ $self->{_CPU} }->{_addresses}; $i++) {
+    read $f, $next_value, 2;
+    $next_value = unpack 'S', $next_value;
+    push @memory, $next_value;
+  }
+  ${ $self->{_CPU} }->{_memory} = \@memory;
+
+  # Load stack
+  while (read $f, $next_value, 2) {
+    $next_value = unpack 'S', $next_value;
+    ${ $self->{_CPU} }->{_stack}->Push($next_value);
+  }
+
+  close $f;
 }
 
 sub ToggleVerbose {
