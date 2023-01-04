@@ -75,6 +75,7 @@ sub LoadFile {
   }
 
   close $f;
+  return;
 }
 
 sub Emulate {
@@ -83,6 +84,8 @@ sub Emulate {
   while ($self->{_PC} < $self->{_addresses}) {
     $self->_execNext;
   }
+
+  return;
 }
 
 # ################### #

@@ -32,6 +32,7 @@ sub new {
   };
 
   bless $self, $class;
+  return $self;
 }
 
 sub RunCmd {
@@ -137,6 +138,7 @@ sub _saveState {
   foreach ($cpu->{_stack}->GetStack) { print $f pack 'v', $_; }
 
   close $f;
+  return;
 }
 
 sub _loadState {
@@ -183,6 +185,7 @@ sub _loadState {
   }
 
   close $f;
+  return;
 }
 
 sub _toggleVerbose {
@@ -207,6 +210,7 @@ sub _dumpStack {
     say "\tSTACK[$i]: $_";
     $i++;
   }
+  return;
 }
 
 sub _dumpRegisters {
@@ -217,6 +221,7 @@ sub _dumpRegisters {
     say "\tREG[$i]: $_";
     $i++;
   }
+  return;
 }
 
 sub _printAddrs {
@@ -229,6 +234,7 @@ sub _printAddrs {
     }
     say "MEM[$addr+$_] = $value";
   }
+  return;
 }
 
 sub _solveCoins {
