@@ -39,9 +39,12 @@ sub RunCmd {
   my ($self, $line) = @_;
 
   my @cmd = split ' ', $line;
+  $cmd[0] //= '';
 
   if ($cmd[0] eq 'solvecoins') {
     $self->_solveCoins;
+  } elsif ($cmd[0] eq 's') {
+    $self->_step;
   } elsif ($cmd[0] eq 'b') {
     $self->_setUnsetBreakpoint($cmd[1]);
   } elsif ($cmd[0] eq 'v') {
@@ -69,12 +72,20 @@ sub RunCmd {
 
 sub HandleBreakpoint {
   my ($self) = @_;
-  my $cpu = ${ $self->{_CPU} };
 
   print '*DBG* ?- ';
-  chomp(my $dbg_cmd = <>);
-  if ($dbg_cmd ne 'c') {
+  my $dbg_cmd = '';
+  while (chomp($dbg_cmd = <>)) {
+    if ($dbg_cmd eq 'c') {
+      last;
+    }
     $self->RunCmd($dbg_cmd);
+    print '*DBG* ?- ';
+  }
+
+  my $cpu = ${ $self->{_CPU} };
+  if (exists $self->{_breakpoints}{$cpu->{_PC}}) {
+    $self->_stepOverBreakpoint;
   }
   return;
 }
@@ -82,6 +93,29 @@ sub HandleBreakpoint {
 # ############################################ #
 # private subroutines and debugger opearations #
 # ############################################ #
+sub _stepOverBreakpoint {
+  my ($self) = @_;
+  my $cpu = ${ $self->{_CPU} };
+  my $bp_addr = $cpu->{_PC};
+  my $old_instr = $self->{_breakpoints}{$bp_addr};
+  $cpu->{_memory}[$bp_addr] = $old_instr;
+  $cpu->_execNext;
+  $cpu->{_memory}[$bp_addr] = -1;
+  return;
+}
+
+
+sub _step {
+  my ($self) = @_;
+  my $cpu = ${ $self->{_CPU} };
+  if (exists $self->{_breakpoints}{$cpu->{_PC}}) {
+    $self->_stepOverBreakpoint;
+  } else {
+    $cpu->_execNext;
+  }
+  return;
+}
+
 sub _setUnsetBreakpoint {
   my ($self, $addr) = @_;
 

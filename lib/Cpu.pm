@@ -454,7 +454,10 @@ sub _in {
   my ($reg) = $self->_getArgs(1);
   $reg = $self->_getRegIndex($reg);
   say "[$self->{_PC}] #20: in $reg" if $self->{_verbose};
-  my $c = getc(STDIN);
+  my $c;
+  while (!defined $c) {
+    $c = getc(STDIN);
+  }
   if ($c eq '@') {
     chomp(my $dbg_cmd = <>);
     $self->{_debugger}->RunCmd($dbg_cmd);
