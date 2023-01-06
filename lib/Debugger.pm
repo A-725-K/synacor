@@ -21,6 +21,7 @@ use v5.36;
 use strict;
 use warnings;
 
+use Operations;
 use Algorithm::Permute;
 
 sub new {
@@ -43,6 +44,8 @@ sub RunCmd {
 
   if ($cmd[0] eq 'solvecoins') {
     $self->_solveCoins;
+  } elsif ($cmd[0] eq 'd') {
+    $self->_disass($cmd[1], $cmd[2]);
   } elsif ($cmd[0] eq 's') {
     $self->_step;
   } elsif ($cmd[0] eq 'b') {
@@ -93,6 +96,95 @@ sub HandleBreakpoint {
 # ############################################ #
 # private subroutines and debugger opearations #
 # ############################################ #
+
+# disassemble instructions, not all of the instructions are useful to
+# decode the interesting routine, disregarding breakpoints
+sub _disass {
+  my ($self, $addr, $instr_n) = @_;
+  if (!defined $addr || !defined $instr_n) {
+    say "You should provide base address and number of instructions!";
+    return;
+  }
+
+  my @mem = @{ ${ $self->{_CPU} }->{_memory} };
+  for (1..$instr_n) {
+    if ($mem[$addr] == $Operations::OPCODES->{JT}) {
+      my $reg = $mem[$addr+1]-32768;
+      say "MEM[$addr]: jt r$reg $mem[$addr+2]";
+      $addr += 3;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{ADD}) {
+      my $reg = $mem[$addr+1]-32768;
+      my $op1 = $mem[$addr+2];
+      if ($op1 >= 32768) {
+        $op1 -= 32768;
+        $op1 = "r$op1";
+      }
+      my $op2 = $mem[$addr+3];
+      if ($op2 >= 32768) {
+        $op2 -= 32768;
+        $op2 = "r$op2";
+      } elsif ($op2 == 32767) {
+        $op2 = -1
+      }
+      say "MEM[$addr]: add r$reg $op1 $op2";
+      $addr += 4;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{RET}) {
+      say "MEM[$addr]: ret";
+      $addr++;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{PUSH}) {
+      my $op1 = $mem[$addr+1];
+      if ($op1 >= 32768) {
+        $op1 -= 32768;
+        $op1 = "r$op1";
+      }
+      say "MEM[$addr]: push $op1";
+      $addr += 2;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{POP}) {
+      my $op1 = $mem[$addr+1];
+      if ($op1 >= 32768) {
+        $op1 -= 32768;
+        $op1 = "r$op1";
+      }
+      say "MEM[$addr]: pop $op1";
+      $addr += 2;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{CALL}) {
+      say "MEM[$addr]: call $mem[$addr+1]";
+      $addr += 2;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{SET}) {
+      my $op1 = $mem[$addr+1];
+      if ($op1 >= 32768) {
+        $op1 -= 32768;
+        $op1 = "r$op1";
+      }
+      my $op2 = $mem[$addr+2];
+      if ($op2 >= 32768) {
+        $op2 -= 32768;
+        $op2 = "r$op2";
+      }
+      say "MEM[$addr]: set $op1 $op2";
+      $addr += 3;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{EQ}) {
+      my $reg = $mem[$addr+1]-32768;
+      my $op1 = $mem[$addr+2];
+      if ($op1 >= 32768) {
+        $op1 -= 32768;
+        $op1 = "r$op1";
+      }
+      my $op2 = $mem[$addr+3];
+      if ($op2 >= 32768) {
+        $op2 -= 32768;
+        $op2 = "r$op2";
+      }
+      say "MEM[$addr]: eq r$reg $op1 $op2";
+      $addr += 4;
+    } else {
+      say "UNKN: $mem[$addr]";
+    }
+  }
+
+  return;
+}
+
 sub _stepOverBreakpoint {
   my ($self) = @_;
   my $cpu = ${ $self->{_CPU} };
@@ -262,6 +354,10 @@ sub _dumpRegisters {
 
 sub _printAddrs {
   my ($self, $addr, $len) = @_;
+  if (!defined $addr) {
+    say 'No address provided.';
+    return;
+  }
   for (0..$len-1) {
     my $value = ${ $self->{_CPU} }->{_memory}[$addr+$_];
     $value = ${ $self->{_CPU} }->_fetch($value);
