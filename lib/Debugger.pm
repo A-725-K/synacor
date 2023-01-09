@@ -50,6 +50,8 @@ sub RunCmd {
     $self->_step;
   } elsif ($cmd[0] eq 'b') {
     $self->_setUnsetBreakpoint($cmd[1]);
+  } elsif ($cmd[0] eq 'w') {
+    $self->_patchMem($cmd[1], $cmd[2]);
   } elsif ($cmd[0] eq 'v') {
     $self->_toggleVerbose;
   } elsif ($cmd[0] eq 'x') {
@@ -96,6 +98,24 @@ sub HandleBreakpoint {
 # ############################################ #
 # private subroutines and debugger opearations #
 # ############################################ #
+sub _patchMem {
+  my ($self, $addr, $val) = @_;
+  if (!defined $addr || !defined $val) {
+    say "You should provide address and value to patch the memory!";
+    return;
+  }
+  ${ $self->{_CPU} }->{_memory}[$addr] = $val;
+  return;
+}
+
+sub _fetch {
+  my ($self, $addr) = @_;
+  if ($addr >= 32768) {
+    $addr -= 32768;
+    $addr = "r$addr";
+  }
+  return $addr;
+}
 
 # disassemble instructions, not all of the instructions are useful to
 # decode the interesting routine, disregarding breakpoints
@@ -108,74 +128,48 @@ sub _disass {
 
   my @mem = @{ ${ $self->{_CPU} }->{_memory} };
   for (1..$instr_n) {
-    if ($mem[$addr] == $Operations::OPCODES->{JT}) {
-      my $reg = $mem[$addr+1]-32768;
-      say "MEM[$addr]: jt r$reg $mem[$addr+2]";
+    if ($mem[$addr] == $Operations::OPCODES->{JF}) {
+      my $reg = $self->_fetch($mem[$addr+1]);
+      say "MEM[$addr]: jf $reg $mem[$addr+2]";
+      $addr += 3;
+    } elsif ($mem[$addr] == $Operations::OPCODES->{JT}) {
+      my $reg = $self->_fetch($mem[$addr+1]);
+      say "MEM[$addr]: jt $reg $mem[$addr+2]";
       $addr += 3;
     } elsif ($mem[$addr] == $Operations::OPCODES->{ADD}) {
-      my $reg = $mem[$addr+1]-32768;
-      my $op1 = $mem[$addr+2];
-      if ($op1 >= 32768) {
-        $op1 -= 32768;
-        $op1 = "r$op1";
-      }
-      my $op2 = $mem[$addr+3];
-      if ($op2 >= 32768) {
-        $op2 -= 32768;
-        $op2 = "r$op2";
-      } elsif ($op2 == 32767) {
+      my $reg = $self->_fetch($mem[$addr+1]);
+      my $op1 = $self->_fetch($mem[$addr+2]);
+      my $op2 = $self->_fetch($mem[$addr+3]);
+      if ($op2 == 32767) {
         $op2 = -1
       }
-      say "MEM[$addr]: add r$reg $op1 $op2";
+      say "MEM[$addr]: add $reg $op1 $op2";
       $addr += 4;
     } elsif ($mem[$addr] == $Operations::OPCODES->{RET}) {
       say "MEM[$addr]: ret";
       $addr++;
     } elsif ($mem[$addr] == $Operations::OPCODES->{PUSH}) {
-      my $op1 = $mem[$addr+1];
-      if ($op1 >= 32768) {
-        $op1 -= 32768;
-        $op1 = "r$op1";
-      }
+      my $op1 = $self->_fetch($mem[$addr+1]);
       say "MEM[$addr]: push $op1";
       $addr += 2;
     } elsif ($mem[$addr] == $Operations::OPCODES->{POP}) {
-      my $op1 = $mem[$addr+1];
-      if ($op1 >= 32768) {
-        $op1 -= 32768;
-        $op1 = "r$op1";
-      }
+      my $op1 = $self->_fetch($mem[$addr+1]);
       say "MEM[$addr]: pop $op1";
       $addr += 2;
     } elsif ($mem[$addr] == $Operations::OPCODES->{CALL}) {
-      say "MEM[$addr]: call $mem[$addr+1]";
+      my $op1 = $self->_fetch($mem[$addr+1]);
+      say "MEM[$addr]: call $op1";
       $addr += 2;
     } elsif ($mem[$addr] == $Operations::OPCODES->{SET}) {
-      my $op1 = $mem[$addr+1];
-      if ($op1 >= 32768) {
-        $op1 -= 32768;
-        $op1 = "r$op1";
-      }
-      my $op2 = $mem[$addr+2];
-      if ($op2 >= 32768) {
-        $op2 -= 32768;
-        $op2 = "r$op2";
-      }
+      my $op1 = $self->_fetch($mem[$addr+1]);
+      my $op2 = $self->_fetch($mem[$addr+2]);
       say "MEM[$addr]: set $op1 $op2";
       $addr += 3;
     } elsif ($mem[$addr] == $Operations::OPCODES->{EQ}) {
-      my $reg = $mem[$addr+1]-32768;
-      my $op1 = $mem[$addr+2];
-      if ($op1 >= 32768) {
-        $op1 -= 32768;
-        $op1 = "r$op1";
-      }
-      my $op2 = $mem[$addr+3];
-      if ($op2 >= 32768) {
-        $op2 -= 32768;
-        $op2 = "r$op2";
-      }
-      say "MEM[$addr]: eq r$reg $op1 $op2";
+      my $reg = $self->_fetch($mem[$addr+1]);
+      my $op1 = $self->_fetch($mem[$addr+2]);
+      my $op2 = $self->_fetch($mem[$addr+3]);
+      say "MEM[$addr]: eq $reg $op1 $op2";
       $addr += 4;
     } else {
       say "UNKN: $mem[$addr]";
