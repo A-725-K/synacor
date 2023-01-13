@@ -2,7 +2,7 @@ package Debugger;
 
 # Synacor challenge: implement a CPU emulator for fun and learning purpose.
 #
-# Copyright (C) 2022 A-725-K (Andrea Canepa)
+# Copyright (C) 2023 A-725-K (Andrea Canepa)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -36,6 +36,15 @@ sub new {
   return $self;
 }
 
+# TODO:
+# - implement _solveMaze
+# - implement r <string> (reverse a string)
+# - implement h help for debugger
+# - move 32768 to a shared place (o in CPU?)
+# - implement halt to gracefully shutdown the CPU
+# - writeup in README.md
+# - prepare misc directory
+
 sub RunCmd {
   my ($self, $line) = @_;
 
@@ -46,6 +55,8 @@ sub RunCmd {
     $self->_solveCoins;
   } elsif ($cmd[0] eq 'solvetel') {
     $self->_solveTeleporter;
+  } elsif ($cmd[0] eq 'solvemaze') {
+    $self->_solveMaze;
   } elsif ($cmd[0] eq 'd') {
     $self->_disass($cmd[1], $cmd[2]);
   } elsif ($cmd[0] eq 's') {
@@ -476,6 +487,14 @@ sub _solveTeleporter {
   }
 
   wait for @$procs;
+  return;
+}
+
+sub _solveMaze {
+  my ($self) = @_;
+
+
+
   return;
 }
 

@@ -1,4 +1,4 @@
-package Operations;
+package Queue;
 
 # Synacor challenge: implement a CPU emulator for fun and learning purpose.
 #
@@ -21,34 +21,40 @@ use v5.36;
 use strict;
 use warnings;
 
-our $OPCODES = {
-  # DBG util
-  BP => -1, # breakpoint
+sub new {
+  my ($class) = @_;
+  my $self = {
+    _queue => [],
+  };
+  bless $self, $class;
+  return $self;
+}
 
-  # CPU opcode
-  HALT => 0,
-  SET => 1,
-  PUSH => 2,
-  POP => 3,
-  EQ => 4,
-  GT => 5,
-  JMP => 6,
-  JT => 7,
-  JF => 8,
-  ADD => 9,
-  MULT => 10,
-  MOD => 11,
-  AND => 12,
-  OR => 13,
-  NOT => 14,
-  RMEM => 15,
-  WMEM => 16,
-  CALL => 17,
-  RET => 18,
-  OUT => 19,
-  IN => 20,
-  NOOP => 21,
-};
+sub Enqueue {
+  my ($self, $el) = @_;
+  push @{ $self->{_queue} }, $el;
+  return;
+}
+
+sub Dequeue {
+  my ($self) = @_;
+  return shift @{ $self->{_queue} };
+}
+
+sub Size {
+  my ($self) = @_;
+  return scalar @{ $self->{_queue} };
+}
+
+sub IsEmpty {
+  my ($self) = @_;
+  return $self->Size == 0;
+}
+
+sub GetQueue {
+  my ($self) = @_;
+  return @{ $self->{_queue} };
+}
 
 1;
 

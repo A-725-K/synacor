@@ -2,7 +2,7 @@ package Cpu;
 
 # Synacor challenge: implement a CPU emulator for fun and learning purpose.
 #
-# Copyright (C) 2022 A-725-K (Andrea Canepa)
+# Copyright (C) 2023 A-725-K (Andrea Canepa)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
