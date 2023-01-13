@@ -38,7 +38,6 @@ sub new {
 }
 
 # TODO:
-# - implement h help for debugger
 # - move 32768 to a shared place (o in CPU?)
 # - writeup in README.md
 # - prepare misc directory
@@ -59,6 +58,8 @@ sub RunCmd {
     $self->_reverseStr($cmd[1]);
   } elsif ($cmd[0] eq 'd') {
     $self->_disass($cmd[1], $cmd[2]);
+  } elsif ($cmd[0] eq 'h' || $cmd[0] eq 'help' || $cmd[0] eq '?') {
+    $self->_help;
   } elsif ($cmd[0] eq 's') {
     $self->_step;
   } elsif ($cmd[0] eq 'b') {
@@ -113,6 +114,46 @@ sub HandleBreakpoint {
 # ############################################ #
 # private subroutines and debugger opearations #
 # ############################################ #
+sub _help {
+  my ($self) = @_;
+  my $help_str = <<'EOF';
+
+@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@ DEBUGGER COMMANDS @@@
+@@@@@@@@@@@@@@@@@@@@@@@@@
+
+=== UTIL ===
+  - h, help, ?          print this help message
+  - save <FILENAME>     save the CPU state in file <FILENAME>
+  - load <FILENAME>     load the CPU state from file <FILENAME>
+  - halt                halt the CPU gracefully
+  - r <STR>             reverse the string <STR>
+  - v                   toggle verbose mode of CPU to see debug information
+
+=== CPU ===
+  - st                  dump the content of the stack
+  - reg                 display the registers and their content
+  - setreg <IDX> <VAL>  set register <IDX> to value <VAL>
+  - b <ADDR>            set breakpoint to address <ADDR>, if there was already
+                        a breakpoint set, remove it
+  - s                   run a single instruction
+  - x <ADDR>            dump the content of memory ad address <ADDR>
+  - p <NUM>             dump the content of <NUM> memory addresses starting
+                        from PC (Program Counter)
+  - d <ADDR> <NUM>      disassemble <NUM> instructions starting from address
+                        <ADDR>
+  - w <ADDR> <VAL>      write value <VAL> in memory at address <ADDR>
+
+=== SOLVERS ===
+  - solvecoins          solve coins riddle and display the solution
+  - solvetel            solve teleporter riddle and display the solution
+                        (/!\ TAKES LONG TIME! BE CAREFUL! /!\)
+  - solvemaze           solve maze riddle and display the solution
+EOF
+  say $help_str;
+  return;
+}
+
 sub _haltCpu {
   my ($self) = @_;
   ${ $self->{_CPU} }->_halt;
