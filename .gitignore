@@ -1,5 +1,4 @@
 arch-spec
 *.bin*
-*.txt
 *test*
-*.go
+*codes*
