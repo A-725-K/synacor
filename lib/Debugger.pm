@@ -40,7 +40,6 @@ sub new {
 # TODO:
 # - implement h help for debugger
 # - move 32768 to a shared place (o in CPU?)
-# - implement halt to gracefully shutdown the CPU
 # - writeup in README.md
 # - prepare misc directory
 
@@ -72,6 +71,8 @@ sub RunCmd {
     $self->_printAddrs($cmd[1], 1);
   } elsif ($cmd[0] eq 'p') {
     $self->_printAddrs(${ $self->{_CPU} }->{_PC}, $cmd[1]);
+  } elsif ($cmd[0] eq 'halt') {
+    $self->_haltCpu;
   } elsif ($cmd[0] eq 'save') {
     $self->_saveState($cmd[1]);
   } elsif ($cmd[0] eq 'load') {
@@ -112,6 +113,12 @@ sub HandleBreakpoint {
 # ############################################ #
 # private subroutines and debugger opearations #
 # ############################################ #
+sub _haltCpu {
+  my ($self) = @_;
+  ${ $self->{_CPU} }->_halt;
+  return;
+}
+
 sub _patchMem {
   my ($self, $addr, $val) = @_;
   if (!defined $addr || !defined $val) {
