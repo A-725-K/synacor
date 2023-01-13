@@ -21,6 +21,7 @@ use v5.36;
 use strict;
 use warnings;
 
+use Queue;
 use Operations;
 use Algorithm::Permute;
 
@@ -37,8 +38,6 @@ sub new {
 }
 
 # TODO:
-# - implement _solveMaze
-# - implement r <string> (reverse a string)
 # - implement h help for debugger
 # - move 32768 to a shared place (o in CPU?)
 # - implement halt to gracefully shutdown the CPU
@@ -57,6 +56,8 @@ sub RunCmd {
     $self->_solveTeleporter;
   } elsif ($cmd[0] eq 'solvemaze') {
     $self->_solveMaze;
+  } elsif ($cmd[0] eq 'r') {
+    $self->_reverseStr($cmd[1]);
   } elsif ($cmd[0] eq 'd') {
     $self->_disass($cmd[1], $cmd[2]);
   } elsif ($cmd[0] eq 's') {
@@ -490,10 +491,158 @@ sub _solveTeleporter {
   return;
 }
 
+sub _reverseStr {
+  my ($self, $s) = @_;
+  if (!defined $s) {
+    say "You must provide a string to reverse!";
+    return;
+  }
+  say "$s -> ", scalar reverse $s;
+  return;
+}
+
+sub _isValid {
+  my ($self, $x, $y) = @_;
+  return $x >= 0 && $x <= 3 && $y >= 0 && $y <= 3;
+}
+
+sub _isOperand {
+  my ($self, $c) = @_;
+  return $c eq '+' || $c eq '-' || $c eq '*';
+}
+
+sub _findPath {
+  my ($self, $goal, @maze) = @_;
+
+  my ($start_x, $start_y) = (0, 3);
+  my ($end_x, $end_y) = (3, 0);
+  my $hit_start = 0;
+  my $min_lvl = 999;
+  my @paths;
+
+  my $q = Queue->new;
+  $q->Enqueue([0, $start_x, $start_y, '+', 0, ('take orb (0,3) [22]')]);
+  
+  until ($q->IsEmpty) {
+    my ($value, $x, $y, $prev_op, $lvl, @p) = @{ $q->Dequeue };
+
+    # do the operation
+    my ($next_op, $next_value, $curr) = ('', $value, $maze[$y][$x]);
+    if ($self->_isOperand($curr)) {
+      $next_op = $curr;
+    } else {
+      if ($prev_op eq '+') {
+        $next_value += $curr;
+      } elsif ($prev_op eq '-') {
+        $next_value -= $curr;
+      } elsif ($prev_op eq '*') {
+        $next_value *= $curr;
+      } else {
+        say "Invalid operation: $curr";
+        return ();
+      }
+    }
+
+    # it is possible to walk on the final tile only once
+    if ($x == $end_x && $y == $end_y) {
+      # can open the secret vault
+      if ($next_value == $goal && $lvl <= $min_lvl) {
+        $min_lvl = $lvl;
+        say '>>>>>>>>>>> FOUND A PATH!';
+        push @paths, \@p;
+      }
+      # ended up in the final tile with a wrong orb weight, discard this path
+      next;
+    }
+
+    # if the current level is greater than the min path already found
+    # that path won't be the correct one
+    next if $lvl > $min_lvl;
+
+    # if the orb is too heavy or too light, I assume there is no solution down
+    # that path
+    next if $value > 60 || $value < 0;
+
+    # it is possible to walk on start tile only once
+    next if $hit_start++ && $x == $start_x && $y == $start_y;
+
+    # try to walk east
+    if ($self->_isValid($x+1, $y)) {
+      my @new_path = @p;
+      push @new_path, sprintf(
+        "east (%d,%d) [%s] {%d}",
+        $x+1, $y,
+        $maze[$y][$x+1],
+        $next_value,
+      );
+      $q->Enqueue([$next_value, $x+1, $y, $next_op, $lvl+1, @new_path]);
+    }
+
+    # try to walk west
+    if ($self->_isValid($x-1, $y)) {
+      my @new_path = @p;
+      push @new_path, sprintf(
+        "west (%d,%d) [%s] {%d}",
+        $x-1, $y,
+        $maze[$y][$x-1],
+        $next_value,
+      );
+      $q->Enqueue([$next_value, $x-1, $y, $next_op, $lvl+1, @new_path]);
+    }
+
+    # try to walk south
+    if ($self->_isValid($x, $y+1)) {
+      my @new_path = @p;
+      push @new_path, sprintf(
+        "south (%d,%d) [%s] {%d}",
+        $x, $y+1,
+        $maze[$y+1][$x],
+        $next_value,
+      );
+      $q->Enqueue([$next_value, $x, $y+1, $next_op, $lvl+1, @new_path]);
+    }
+
+    # try to walk north
+    if ($self->_isValid($x, $y-1)) {
+      my @new_path = @p;
+      push @new_path, sprintf(
+        "north (%d,%d) [%s] {%d}",
+        $x, $y-1,
+        $maze[$y-1][$x],
+        $next_value,
+      );
+      $q->Enqueue([$next_value, $x, $y-1, $next_op, $lvl+1, @new_path]);
+    }
+  }
+
+  return @paths;
+}
+
 sub _solveMaze {
   my ($self) = @_;
 
+  my @maze = (
+    ['*', '8', '-', '1'],
+    ['4', '*', '11', '*'],
+    ['+', '4', '-', '18'],
+    ['22', '-', '9', '*'],
+  );
 
+  for (my $y = 0; $y < 4; $y++) {
+    for (my $x = 0; $x < 4; $x++) {
+      printf "[%2s]", $maze[$y][$x];
+    }
+    say '';
+  }
+  say '';
+
+  my @paths = $self->_findPath(30, @maze);
+  while (my ($i, $path) = each @paths) {
+    say "\n[$i] Path of length: ", scalar @$path - 1;
+    foreach my $step (@$path) {
+      say "  $step";
+    }
+  }
 
   return;
 }
