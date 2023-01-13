@@ -38,7 +38,6 @@ sub new {
 }
 
 # TODO:
-# - move 32768 to a shared place (o in CPU?)
 # - writeup in README.md
 # - prepare misc directory
 
@@ -172,8 +171,9 @@ sub _patchMem {
 
 sub _fetch {
   my ($self, $addr) = @_;
-  if ($addr >= 32768) {
-    $addr -= 32768;
+  my $mod = ${ $self->{_CPU} }->{_MOD};
+  if ($addr >= $mod) {
+    $addr -= $mod;
     $addr = "r$addr";
   }
   return $addr;
@@ -454,7 +454,7 @@ sub _solveCoins {
 }
 
 sub _memoAck {
-  my ($self, $r0, $r1, $r7, $memo) = @_;
+  my ($self, $r0, $r1, $r7, $memo, $mod) = @_;
 
   no warnings 'recursion';
 
@@ -464,35 +464,35 @@ sub _memoAck {
 
   my $res;
   if ($r0 == 0) {
-    $res = ($r1+1)%32768;
+    $res = ($r1+1) % $mod;
     $memo->{"$r0:$r1"} = $res;
     return $res;
   }
 
   if ($r1 == 0) {
-    my $r0Tmp = ($r0-1)%32768;
-    $res = $self->_memoAck($r0Tmp, $r7, $r7, $memo);
+    my $r0Tmp = ($r0-1) % $mod;
+    $res = $self->_memoAck($r0Tmp, $r7, $r7, $memo, $mod);
     $memo->{"$r0Tmp:$r7"} = $res;
     return $res;
   }
 
   my $r0Tmp = $r0;
-  my $r1Tmp = ($r1-1)%32768;
-  $r0 = $self->_memoAck($r0Tmp, $r1Tmp, $r7, $memo);
+  my $r1Tmp = ($r1-1) % $mod;
+  $r0 = $self->_memoAck($r0Tmp, $r1Tmp, $r7, $memo, $mod);
   $memo->{"$r0Tmp:$r1Tmp"} = $r0;
-  $r0Tmp = ($r0Tmp-1)%32768;
-  $res = $self->_memoAck($r0Tmp, $r0, $r7, $memo);
+  $r0Tmp = ($r0Tmp-1) % $mod;
+  $res = $self->_memoAck($r0Tmp, $r0, $r7, $memo, $mod);
   $memo->{"$r0Tmp:$r0"} = $res;
 
   return $res;
 }
 
 sub _rangeMemoAck {
-  my ($self, $id, $start, $end) = @_;
+  my ($self, $id, $start, $end, $mod) = @_;
 
   for (my $r7 = $start; $r7 < $end; $r7++) {
     my %memo;
-    my $res = $self->_memoAck(4, 1, $r7, \%memo);
+    my $res = $self->_memoAck(4, 1, $r7, \%memo, $mod);
 
     say "[$id] Testing $r7..." if ($r7%300) == 0;
 
@@ -509,6 +509,7 @@ sub _solveTeleporter {
   my ($self) = @_;
 
   my $procs = [];
+  my $mod = ${ $self->{_CPU} }->{_MOD};
 
   local $SIG{CHLD} = 'IGNORE';
   local $SIG{ALRM} = sub {
@@ -516,15 +517,15 @@ sub _solveTeleporter {
   };
 
   for (my $i = 0; $i < 8; $i++) {
-    my $start = 32768/8*$i;
-    my $end = 32768/8*($i+1);
+    my $start = $mod/8*$i;
+    my $end = $mod/8*($i+1);
 
     my $pid = fork();
     die "Cannot fork: $!" if !defined $pid;
 
     if ($pid == 0) {
       # CHILD PROCESS
-      my $res = $self->_rangeMemoAck($i, $start, $end);
+      my $res = $self->_rangeMemoAck($i, $start, $end, $mod);
       if (defined $res) {
         say ">>> Result is $res";
         kill 'SIGALRM', getppid;

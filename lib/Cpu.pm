@@ -28,10 +28,6 @@ use Stack;
 use Debugger;
 use Operations;
 
-our $MOD = 32768;
-our $REG_BASE = 32768;
-our $MAX_VALUE = 32775;
-
 sub new {
   my ($class, $_verbose) = @_;
 
@@ -56,6 +52,9 @@ sub new {
     _verbose => $_verbose,
     _addresses => 0,
     _debugger => Debugger->new(\$self),
+
+    _MOD => 32768,
+    _MAX_VALUE => 32775, # $MOD + 8 registers
   };
 
   bless $self, $class;
@@ -156,12 +155,12 @@ sub _execNext {
 
 sub _getRegIndex {
   my ($self, $arg) = @_;
-  return $arg-$REG_BASE;
+  return $arg-$self->{_MOD};
 }
 
 sub _fetch {
   my ($self, $arg) = @_;
-  if ($arg >= $REG_BASE) {
+  if ($arg >= $self->{_MOD}) {
     $arg = @{ $self->{_registers} }[$self->_getRegIndex($arg)];
   }
   return $arg;
@@ -172,7 +171,7 @@ sub _getArgs {
   my @args;
   for (1..$n) {
     my $next_arg = $self->{_memory}[$self->{_PC}+$_];
-    die "Invalid value in memory" if $next_arg > $MAX_VALUE;
+    die "Invalid value in memory" if $next_arg > $self->{_MAX_VALUE};
     push @args, $next_arg;
   }
   return @args;
@@ -316,7 +315,7 @@ sub _add {
   $op1 = $self->_fetch($op1);
   $op2 = $self->_fetch($op2);
   say "[$self->{_PC}] #9: add $dest $op1 $op2" if $self->{_verbose};
-  my $result = ($op1 + $op2) % $MOD;
+  my $result = ($op1 + $op2) % $self->{_MOD};
   $self->_storeInReg($dest, $result);
   $self->{_PC} += 4;
   return;
@@ -330,7 +329,7 @@ sub _mult {
   $op1 = $self->_fetch($op1);
   $op2 = $self->_fetch($op2);
   say "[$self->{_PC}] #10: mult $dest $op1 $op2" if $self->{_verbose};
-  my $result = ($op1 * $op2) % $MOD;
+  my $result = ($op1 * $op2) % $self->{_MOD};
   $self->_storeInReg($dest, $result);
   $self->{_PC} += 4;
   return;
