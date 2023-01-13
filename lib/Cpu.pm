@@ -94,6 +94,8 @@ sub Emulate {
 sub _execNext {
   my ($self) = @_;
 
+  state $prompt = 0;
+
   my $next_op = $self->{_memory}[$self->{_PC}];
 
   if ($next_op == $Operations::OPCODES->{HALT}) { # 0
@@ -136,8 +138,11 @@ sub _execNext {
     $self->_ret;
   } elsif ($next_op == $Operations::OPCODES->{OUT}) { # 19
     $self->_out;
+    $prompt = 0;
   } elsif ($next_op == $Operations::OPCODES->{IN}) { # 20
-    $self->_in;
+    print '> ' if !$prompt++;
+    my $dbg_cmd = $self->_in;
+    $prompt-- if $dbg_cmd;
   } elsif ($next_op == $Operations::OPCODES->{NOOP}) { # 21
     $self->_noop;
   } elsif ($next_op == $Operations::OPCODES->{BP}) { # -1
@@ -461,7 +466,7 @@ sub _in {
   if ($c eq '@') {
     chomp(my $dbg_cmd = <>);
     $self->{_debugger}->RunCmd($dbg_cmd);
-    return;
+    return 1;
   }
   $self->_storeInReg($reg, ord($c));
   $self->{_PC} += 2;

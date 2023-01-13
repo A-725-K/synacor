@@ -71,7 +71,7 @@ sub RunCmd {
   } elsif ($cmd[0] eq 'setreg') {
     $self->_setReg($cmd[1], $cmd[2]);
   } else {
-    say "Command not known, insert again."
+    say "Command not known, insert again.";
   }
 
   return;
@@ -191,7 +191,6 @@ sub _stepOverBreakpoint {
   $cpu->{_memory}[$bp_addr] = -1;
   return;
 }
-
 
 sub _step {
   my ($self) = @_;
