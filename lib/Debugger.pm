@@ -53,8 +53,8 @@ sub RunCmd {
     $self->_solveTeleporter;
   } elsif ($cmd[0] eq 'solvemaze') {
     $self->_solveMaze;
-  } elsif ($cmd[0] eq 'r') {
-    $self->_reverseStr($cmd[1]);
+  } elsif ($cmd[0] eq 'm') {
+    $self->_mirrorStr($cmd[1]);
   } elsif ($cmd[0] eq 'd') {
     $self->_disass($cmd[1], $cmd[2]);
   } elsif ($cmd[0] eq 'h' || $cmd[0] eq 'help' || $cmd[0] eq '?') {
@@ -126,7 +126,7 @@ sub _help {
   - save <FILENAME>     save the CPU state in file <FILENAME>
   - load <FILENAME>     load the CPU state from file <FILENAME>
   - halt                halt the CPU gracefully
-  - r <STR>             reverse the string <STR>
+  - m <STR>             read the string <STR> as if it was in a mirror
   - v                   toggle verbose mode of CPU to see debug information
 
 === CPU ===
@@ -540,12 +540,26 @@ sub _solveTeleporter {
   return;
 }
 
-sub _reverseStr {
+sub _mirrorStr {
   my ($self, $s) = @_;
   if (!defined $s) {
     say "You must provide a string to reverse!";
     return;
   }
+  $s = scalar reverse $s;
+  my @chars = split //, $s;
+  while (my ($i, $c) = each @chars) {
+    if ($c eq 'b') {
+      $chars[$i] = 'd';
+    } elsif ($c eq 'd') {
+      $chars[$i] = 'b'
+    } elsif ($c eq 'q') {
+      $chars[$i] = 'p';
+    } elsif ($c eq 'p') {
+      $chars[$i] = 'q';
+    }
+  }
+  $s = join '', @chars;
   say "$s -> ", scalar reverse $s;
   return;
 }
