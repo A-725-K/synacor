@@ -37,10 +37,6 @@ sub new {
   return $self;
 }
 
-# TODO:
-# - writeup in README.md
-# - prepare misc directory
-
 sub RunCmd {
   my ($self, $line) = @_;
 
@@ -424,6 +420,9 @@ sub _printAddrs {
   return;
 }
 
+# ################## #
+# Coin puzzle solver #
+# ################## #
 sub _solveCoins {
   my ($self) = @_;
 
@@ -453,6 +452,9 @@ sub _solveCoins {
   return;
 }
 
+# ######################## #
+# Teleporter riddle solver #
+# ######################## #
 sub _memoAck {
   my ($self, $r0, $r1, $r7, $memo, $mod) = @_;
 
@@ -540,6 +542,9 @@ sub _solveTeleporter {
   return;
 }
 
+# #################### #
+# Orb challenge solver #
+# #################### #
 sub _mirrorStr {
   my ($self, $s) = @_;
   if (!defined $s) {
